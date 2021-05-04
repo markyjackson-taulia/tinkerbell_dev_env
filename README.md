@@ -1,2 +1,2 @@
-# Tinkerbell Development Environment
-How to run the Equinix Metal Tinkerbell stack locally with ease of use
+# k8s-site-tink
+Kubernetes repo holding Tink manifests
