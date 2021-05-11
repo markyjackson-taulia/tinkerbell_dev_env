@@ -1,0 +1,19 @@
+clusterFQDN: 'es.equinix.com'
+clusterShortName: 'es.equinix.com'
+location: 'sv16'
+kubeApiEndpoint: '10.80.4.49'
+
+image:
+  repository: nginx
+  tag: latest
+  pullPolicy: IfNotPresent
+
+registry:
+  env:
+
+persistence:
+  accessMode: 'ReadWriteOnce'
+  enabled: true
+  size: 100Gi
+  storageClass: 'rook-ceph-block'
+

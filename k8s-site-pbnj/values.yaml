@@ -1,0 +1,14 @@
+clusterFQDN: 'es.equinix.com'
+clusterShortName: 'es.equinix.com'
+location: 'sv16'
+kubeApiEndpoint: '10.80.4.49'
+
+image:
+  repository: quay.io/tinkerbell/pbnj
+  tag: 46-859a322ed28904d9165d6a78faf19c76142a720a
+  pullPolicy: Always
+
+pbnj:
+  env:
+    LOGENTRIES_TOKEN: changeme
+    PACKET_ENV: testing

@@ -1,0 +1,35 @@
+# Default values for hegel.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+clusterFQDN: 'es.equinix.com'
+clusterShortName: 'es.equinix.com'
+location: 'sv15'
+env: test
+kubeApiEndpoint: '10.80.0.49'
+
+image:
+  repository: quay.io/tinkerbell/hegel
+  tag: 224-e24f023d35e1bd54ad5dbbb382a316210cd6a80f
+  pullPolicy: IfNotPresent
+
+hegel:
+  # Note: The env key is meant to be used for developlment purpose and should not be used for production as is exposes these
+  # values in plain text. Use the vault integration instead.
+  # Certain environment variables get auto generated: FACILITY, PACKET_ENV, PACKET_VERSION
+  replicas: 3
+  env:
+    DEBUG: "false"
+    GRPC_PORT: "50060"
+    HEGEL_USE_TLS: "false"
+    GRPC_PORT: "42115"
+    ROLLBAR_TOKEN: "notused"
+    ROLLBAR_DISABLE: 1
+    PACKET_ENV: "testing"
+    PACKET_VERSION: "ignored"
+    TRUSTED_PROXIES: "10.0.0.0/8"
+    HEGEL_FACILITY: "onprem"
+    TINKERBELL_GRPC_AUTHORITY: "172.23.17.131:42113"
+    TINKERBELL_CERT_URL: "http://172.23.17.131:42114/cert"
+    DATA_MODEL_VERSION: 1
+    CUSTOM_ENDPOINTS: '{"/network":".network", "/userdata":".metadata.userdata", "/metadata": ".metadata"}'
+    

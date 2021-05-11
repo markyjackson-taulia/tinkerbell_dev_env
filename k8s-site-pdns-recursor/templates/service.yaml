@@ -1,0 +1,23 @@
+{{- range $service := .Values.pdns.services }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: "pdns-{{ $service.ip | replace "." "-" }}-{{ $service.protocol | lower }}"
+  labels:
+    k8s-app: pdns-recursor
+  annotations:
+    metallb.universe.tf/address-pool: pdns-recursor
+    metallb.universe.tf/allow-shared-ip: pdns-recursor
+spec:
+#  loadBalancerIP: "{{ $service.ip }}"
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  ports:
+    - port: {{ $service.port }}
+      targetPort: {{ $service.targetPort }}
+      protocol: {{ $service.protocol }}
+      name: "{{ $service.targetPort }}"
+  selector:
+    k8s-app: pdns-recursor
+{{- end }}

@@ -1,0 +1,40 @@
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+  name: boots-ingress
+spec:
+  ingressClassName: nginx-external
+  rules:
+    - host: tinkerbell.es.equinix.com
+      http:
+        paths:
+          - path: /
+            {{- if .Values.boots.publicPaths -}}
+              (
+                {{- range $index,$path := .Values.boots.publicPaths }}
+                  {{- if $index }}|{{ end }}
+                  {{- $path }}
+                {{- end -}}
+              )
+            {{- end }}
+            backend:
+              serviceName: boots-http
+              servicePort: http
+    - host: boots.{{ .Values.clusterFQDN }}
+      http:
+        paths:
+          - path: /
+            {{- if .Values.boots.publicPaths -}}
+              (
+                {{- range $index,$path := .Values.boots.publicPaths }}
+                  {{- if $index }}|{{ end }}
+                  {{- $path }}
+                {{- end -}}
+              )
+            {{- end }}
+            backend:
+              serviceName: boots-http
+              servicePort: http

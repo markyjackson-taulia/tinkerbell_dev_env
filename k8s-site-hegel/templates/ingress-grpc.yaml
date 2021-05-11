@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  labels:
+    k8s-app: hegel
+  name: hegel-grpc
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/backend-protocol: GRPC
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx-static
+  rules:
+  - host: hegel-grpc.{{ .Values.clusterFQDN }}
+    http:
+      paths:
+      - backend:
+          serviceName: hegel
+          servicePort: grpc
+        path: /
+  tls:
+  - hosts:
+    - hegel-grpc.{{ .Values.clusterFQDN }}
+    secretName: hegel-grpc.{{ .Values.clusterFQDN }}

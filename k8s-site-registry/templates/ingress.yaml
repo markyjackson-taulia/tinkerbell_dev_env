@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+#    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+  labels:
+    k8s-app: registry
+  name: registry
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: "registry.{{ .Values.location }}.{{ .Values.clusterFQDN }}"
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: registry
+          servicePort: 5000
+  tls:
+    - hosts:
+      -  "registry.{{ .Values.location }}.{{ .Values.clusterFQDN }}"
+      secretName: ingress-tls

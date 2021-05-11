@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    metallb.universe.tf/address-pool: registry
+    metallb.universe.tf/allow-shared-ip: registry
+  name: registry
+  labels:
+    k8s-app: registry
+spec:
+  externalTrafficPolicy: Local
+  selector:
+    k8s-app: registry
+  type: LoadBalancer 
+  ports:
+    - name: registry
+      port: 443
+      targetPort: 5000
+      protocol: TCP

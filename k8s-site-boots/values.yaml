@@ -1,0 +1,52 @@
+clusterFQDN: 'es.equinix.com'
+clusterShortName: 'es.equinix.com'
+location: 'sv15'
+kubeApiEndpoint: '10.80.0.49'
+bootsIP: '172.23.17.128'
+
+image:
+  repository: quay.io/tinkerbell/boots
+  tag: 396-b4dd92a028c4def6e8da22b854e156eab0387599
+  pullPolicy: IfNotPresent
+
+
+boots:
+  debug: true
+  PACKET_ENV: "test"
+  replicas: 3
+  env:
+    API_AUTH_TOKEN: ignored
+    API_CONSUMER_TOKEN: ignored
+    FACILITY_CODE: onprem
+    PACKET_VERSION: ignored
+    ROLLBAR_TOKEN: ignored
+    ROLLBAR_DISABLE: 1
+    MIRROR_HOST: 172.23.17.134
+    DNS_SERVERS: 172.23.17.135
+    PUBLIC_IP: 172.23.17.128
+    BOOTP_BIND: ":67"
+    HTTP_BIND: ":80"
+    SYSLOG_BIND: ":514"
+    TFTP_BIND: ":69"
+    DHCP_LEASE_TIME: "48h"
+    DOCKER_REGISTRY: 172.23.17.130
+    REGISTRY_USERNAME: admin
+    REGISTRY_PASSWORD: admin123
+    TINKERBELL_GRPC_AUTHORITY: 172.23.17.131:42113
+    TINKERBELL_CERT_URL: http://172.23.17.131:42114/cert
+    DATA_MODEL_VERSION: 1
+    ELASTIC_SEARCH_URL: 172.23.17.132:9200
+    NGINX_SERVICE_HOST: 172.23.17.134
+    ALLOWED_NETS:  "172.16.0.0/12, 10.0.0.0/8, 192.168.0.0/16"
+    TRUSTED_PROXIES: "172.16.0.0/12, 10.0.0.0/8, 192.168.0.0/16"
+
+  publicPaths:
+    - $ # Allows `/` only to be returned for api healthchecks
+    - auto.ipxe
+    - coreos
+    - events
+    - flatcar
+    - hardware-components
+    - phone-home
+    - problem
+    - vmware

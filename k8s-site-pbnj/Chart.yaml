@@ -1,0 +1,11 @@
+apiVersion: v2
+name: pbnj
+description: A Helm chart for Kubernetes
+type: application
+version: 0.2.0
+appVersion: 25-272d4fa2bca0402db62984bf5a809d7b5e4a6bdf
+sources:
+  - https://github.com/packethost/pbnj
+maintainers:
+  - name: pereztr5
+    email: tony@packet.com

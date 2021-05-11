@@ -1,0 +1,19 @@
+kind: Service
+apiVersion: v1
+metadata:
+  annotations:
+    metallb.universe.tf/address-pool: boots-dhcp
+    metallb.universe.tf/allow-shared-ip: boots-dhcp
+  labels:
+    k8s-app: boots
+  name: boots-http
+spec:
+  externalTrafficPolicy: Local
+  selector:
+    k8s-app: boots
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: http

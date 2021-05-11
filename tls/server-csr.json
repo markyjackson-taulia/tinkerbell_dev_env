@@ -1,0 +1,30 @@
+{
+  "CN": "tinkerbell",
+  "hosts": [
+    "tinkerbell.sv15.es.equinix.com",
+    "tinkerbell.registry",
+    "tinkerbell.tinkerbell",
+    "tinkerbell",
+    "localhost",
+    "registry.sv15.es.equinix.com",
+    "tink.sv15.es.equinix.com",
+    "hegel.sv15.es.equinix.com",
+    "boots.sv15.es.equinix.com",
+    "tink.tinkerbell.svc",
+    "172.23.17.131",
+    "172.23.17.130",
+    "172.23.17.128",
+    "172.23.17.129",
+    "172.23.17.133",
+    "127.0.0.1"
+  ],
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "L": "onprem"
+    }
+  ]
+}

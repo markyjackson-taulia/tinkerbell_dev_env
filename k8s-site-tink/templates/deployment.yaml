@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tink
+  labels:
+    k8s-app: tink
+spec:
+  replicas: {{ .Values.tink.replicas }}
+  selector:
+    matchLabels:
+      k8s-app: tink
+  template:
+    metadata:
+      labels:
+        k8s-app: tink
+    spec:
+      containers:
+        - name: tink
+          env:
+          - name: TINK_FACILITY
+            value: "{{ .Values.tink.env.FACILITY }}"
+          - name: PACKET_ENV
+            value: "{{ .Values.tink.env.PACKET_ENV }}"
+          - name: PACKET_VERSION
+            value: {{ .Values.image.tag | splitList "-" | last }}
+          - name: PGDATABASE
+            value: "{{ .Values.pgdb }}"
+          - name: PGHOST
+            value: '{{ .Values.pg }}-postgresql-ha-pgpool'
+          - name: PGUSER
+            value: '{{ .Values.pguser }}'
+          - name: PGPASSWORD
+            valueFrom:
+              secretKeyRef:
+                name:  '{{ .Values.pg }}-postgresql-ha-postgresql'
+                key: postgresql-password
+          envFrom:
+          - secretRef:
+              name: tink-env
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: Always
+          ports:
+          - containerPort: 42113
+            name: tink-grpc
+            protocol: TCP
+          - containerPort: 42114
+            name: tink-cert
+            protocol: TCP
+#          livenessProbe:
+#            exec:
+#              command: 
+#              - "wget -qO- 127.0.0.1:42114/cert"
+#            initialDelaySeconds: 5
+#          readinessProbe:
+#            exec:
+#              command: 
+#              - "wget -qO- 127.0.0.1:42114/cert"
+#            initialDelaySeconds: 5
+          resources:
+            limits:
+              cpu: "4"
+              memory: 4096Mi
+            requests:
+              cpu: "4"
+              memory: 4096Mi
+          volumeMounts:
+          - name: tink-tls-keys
+            readOnly: true
+            mountPath: /certs/{{ .Values.tink.env.FACILITY }}
+      volumes:
+      - name: tink-tls-keys
+        secret:
+          secretName: tink-tls-keys
