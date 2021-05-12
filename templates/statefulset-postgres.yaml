@@ -69,6 +69,6 @@ spec:
           requests:
             storage: 20Gi
 {{- if not .Values.rookEnabled }}
-        storageClassName: "ssd"
+        storageClassName: "standard"
 {{- end }}
         volumeMode: Filesystem
