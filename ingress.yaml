@@ -1,0 +1,29 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: tink-server-cert
+  namespace: tinkerbell
+spec:
+  rules:
+  - host: tink-server-cert.sv15.es.equinix.com
+    http:
+      paths:
+      - backend:
+          serviceName: tink
+          servicePort: 42114
+        path: /
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: tink-server-grpc
+  namespace: tinkerbell
+spec:
+  rules:
+  - host: tink-server-grpc.sv15.es.equinix.com
+    http:
+      paths:
+      - backend:
+          serviceName: tink
+          servicePort: 42113
+        path: /
