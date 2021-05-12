@@ -1,0 +1,16 @@
+{{- $name := .Values.postgres.name }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: psql-{{ $name }}
+  labels:
+    k8s-app: psql-{{ $name }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: psql
+      protocol: TCP
+      name: psql
+  selector:
+    k8s-app: psql-{{ $name }}

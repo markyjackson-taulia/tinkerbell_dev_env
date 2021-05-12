@@ -1,0 +1,55 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.org/mergeable-ingress-type: master
+  name: tink-server-cert
+  namespace: nginx-ingress
+spec:
+  rules:
+  - host: tink-server-cert.sv3.es.equinix.com
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.org/mergeable-ingress-type: master
+  name: tink-server-grpc
+  namespace: nginx-ingress
+spec:
+  rules:
+  - host: tink-server-grpc.sv3.es.equinix.com
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.org/mergeable-ingress-type: minion
+  name: tink-server-cert
+  namespace: tinkerbell
+spec:
+  rules:
+  - host: tink-server-cert.sv3.es.equinix.com
+    http:
+      paths:
+      - backend:
+          serviceName: tink
+          servicePort: 42114
+        path: /
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.org/mergeable-ingress-type: minion
+  name: tink-server-grpc
+  namespace: tinkerbell
+spec:
+  rules:
+  - host: tink-server-grpc.sv3.es.equinix.com
+    http:
+      paths:
+      - backend:
+          serviceName: tink
+          servicePort: 42113
+        path: /

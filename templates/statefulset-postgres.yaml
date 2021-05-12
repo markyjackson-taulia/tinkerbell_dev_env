@@ -1,0 +1,74 @@
+{{- $name := .Values.postgres.name }}
+{{- $size := .Values.postgres.size }}
+{{- $resources := pluck .Values.location .Values.overrides.postgresql.resources | first | default .Values.postgres.resources }}
+{{- $cpu := $resources.cpu  | default 1 }}
+{{- $mem := $resources.memory  | default "2Gi" }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: psql-{{ $name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  selector:
+    matchLabels:
+      k8s-app: psql-{{ $name }}
+  replicas: 1
+  serviceName: psql-{{ $name }}
+  template:
+    metadata:
+      labels:
+        k8s-app: psql-{{ $name }}
+    spec:
+      containers:
+        - name: psql-{{ $name }}
+          image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
+          env:
+            - name: PGDATA
+              value: /var/lib/postgres/data
+            - name: PGSSLMODE
+              value: '{{ .Values.global.env.PGSSLMODE }}'
+            - name: POSTGRES_DB
+              value: 'tink-{{ .Values.env }}'
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: tink-db
+                  key: postgres
+            - name: POSTGRES_USER
+              value: '{{ .Values.global.env.PGUSER }}'
+          ports:
+            - containerPort: 5432
+              name: psql
+          resources:
+            requests:
+              cpu: {{ $cpu }}
+              memory: {{ $mem }}
+            limits:
+              cpu: {{ $cpu }}
+              memory: {{ $mem }}
+          volumeMounts:
+            - name: psql-{{ $name }}
+              mountPath: /var/lib/postgres/data
+{{- if .Values.rookEnabled }}
+              subPath: data
+{{- end }}
+      tolerations:
+      - effect: NoSchedule
+        operator: Exists
+        key: node-role.kubernetes.io/master
+  volumeClaimTemplates:
+    - metadata:
+        name: psql-{{ $name }}
+        labels:
+          k8s-app: tink
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi
+{{- if not .Values.rookEnabled }}
+        storageClassName: "ssd"
+{{- end }}
+        volumeMode: Filesystem
