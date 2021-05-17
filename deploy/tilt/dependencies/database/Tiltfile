@@ -1,0 +1,42 @@
+# Load the extension for helm_remote
+load('ext://helm_remote', 'helm_remote')
+
+# Load the password helpers
+load('../../libraries/password/Tiltfile', 'generate_password')
+
+# Load the secret helpers
+load('../../libraries/secrets/Tiltfile', 'secret_exists', 'create_secret_if_not_exists')
+
+def deploy_database(db_name="db", db_user="user", db_password="", admin_password="", credentials_secret_name="db-credentials", resource_deps=[]):
+    if db_password == "":
+        db_password=generate_password()
+
+    if admin_password == "":
+        admin_password=generate_password()
+
+    create_secret_if_not_exists(credentials_secret_name, DB=db_name, USERNAME=db_user, PASSWORD=db_password, ADMIN_PASSWORD=admin_password)
+    db_password = str(local("kubectl get secret "+credentials_secret_name+" -o jsonpath='{.data.PASSWORD}' | base64 -d", quiet=True))
+    admin_password = str(local("kubectl get secret "+credentials_secret_name+" -o jsonpath='{.data.ADMIN_PASSWORD}' | base64 -d", quiet=True))
+
+    set_values = [
+        'postgresqlUsername='+db_user,
+        'postgresqlDatabase='+db_name,
+        'postgresqlPassword='+db_password,
+        'postgresqlPostgresPassword='+admin_password,
+    ]
+
+    helm_remote(
+        'postgresql',
+        release_name='db',
+        repo_url='https://charts.bitnami.com/bitnami',
+        repo_name='postgresql',
+        set=set_values,
+    )
+    k8s_resource(
+        workload='db-postgresql',
+        new_name='db',
+        objects=[
+            'db-postgresql:secret'
+        ],
+        resource_deps=resource_deps
+    )

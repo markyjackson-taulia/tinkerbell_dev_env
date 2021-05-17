@@ -1,0 +1,91 @@
+load('ext://helm_remote', 'helm_remote')
+
+def cert_manager(resource_deps=[]):
+    helm_remote(
+            'cert-manager',
+            namespace='cert-manager',
+            create_namespace=True,
+            repo_url='https://charts.jetstack.io',
+            repo_name='cert-manager',
+            set=['installCRDs=true']
+    )
+    k8s_resource(
+            workload='cert-manager',
+            objects=[
+                # Try to work arouund unmanaged role/clusterrole resources that cannot be included due to ':' in name
+                'cert-manager:namespace',
+                'cert-manager\\:leaderelection:role',
+                'cert-manager\\:leaderelection:rolebinding',
+                'certificaterequests.cert-manager.io:customresourcedefinition',
+                'certificates.cert-manager.io:customresourcedefinition',
+                'challenges.acme.cert-manager.io:customresourcedefinition',
+                'clusterissuers.cert-manager.io:customresourcedefinition',
+                'issuers.cert-manager.io:customresourcedefinition',
+                'orders.acme.cert-manager.io:customresourcedefinition',
+                'cert-manager:serviceaccount',
+                'cert-manager-controller-challenges:clusterrolebinding:cert-manager',
+                'cert-manager-controller-orders:clusterrolebinding:cert-manager',
+                'cert-manager-controller-certificates:clusterrolebinding:cert-manager',
+                'cert-manager-controller-issuers:clusterrolebinding:cert-manager',
+                'cert-manager-controller-clusterissuers:clusterrolebinding:cert-manager',
+                'cert-manager-controller-ingress-shim:clusterrolebinding:cert-manager',
+                'cert-manager-view:clusterrole:cert-manager',
+                'cert-manager-edit:clusterrole:cert-manager',
+                'cert-manager-controller-issuers:clusterrole:cert-manager',
+                'cert-manager-controller-clusterissuers:clusterrole:cert-manager',
+                'cert-manager-controller-certificates:clusterrole:cert-manager',
+                'cert-manager-controller-orders:clusterrole:cert-manager',
+                'cert-manager-controller-challenges:clusterrole:cert-manager',
+                'cert-manager-controller-ingress-shim:clusterrole:cert-manager'
+            ],
+            resource_deps=resource_deps
+    )
+    local_resource("wait-for-cert-manager", 
+        cmd="kubectl wait --for=condition=progressing --timeout=100s deployments cert-manager -n cert-manager", 
+        resource_deps=["cert-manager"] 
+    )
+    local_resource("wait-for-cert-manager-api-service",
+        cmd="kubectl wait --for=condition=available --timeout=100s apiservice v1.acme.cert-manager.io  v1.cert-manager.io",
+        resource_deps=["wait-for-cert-manager"]
+    )
+    local_resource("sleep-until-cert-manager-acquires-kube-system-lease",
+        cmd="sleep 20",
+        resource_deps=["wait-for-cert-manager-api-service"]
+    )
+    k8s_resource(
+        workload='cert-manager-cainjector',
+        objects=[
+            'cert-manager-cainjector:serviceaccount',
+            'cert-manager-cainjector:clusterrolebinding:cert-manager',
+            'cert-manager-cainjector:clusterrole:cert-manager',
+            'cert-manager-cainjector\\:leaderelection:role',
+            'cert-manager-cainjector\\:leaderelection:rolebinding'
+        ],
+        resource_deps=['wait-for-cert-manager']
+    )
+    k8s_resource(
+        workload='cert-manager-webhook',
+        objects=[
+            'cert-manager-webhook:mutatingwebhookconfiguration',
+            'cert-manager-webhook:serviceaccount',
+            'cert-manager-webhook:validatingwebhookconfiguration',
+            'cert-manager-webhook\\:dynamic-serving:role',
+            'cert-manager-webhook\\:dynamic-serving:rolebinding'
+        ],
+        resource_deps=['cert-manager-cainjector']
+    )
+    local_resource("wait-for-cert-manager-cainjector",
+        cmd="kubectl wait --for=condition=progressing --timeout=50s deployments cert-manager-cainjector -n cert-manager",
+        resource_deps=["cert-manager-cainjector"]
+    )
+    local_resource("wait-for-cert-manager-webhook",
+        cmd="kubectl wait --for=condition=progressing --timeout=50s deployments cert-manager-webhook -n cert-manager",
+        resource_deps=["cert-manager-webhook"]
+    )
+    local_resource("sleep-until-cert-manager-configures",
+        cmd="sleep 20",
+        resource_deps=["wait-for-cert-manager-webhook"]
+    )
+
+
+

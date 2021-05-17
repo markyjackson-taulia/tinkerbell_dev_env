@@ -1,0 +1,46 @@
+apiVersion: kubevirt.io/v1alpha3
+kind: VirtualMachineInstance
+metadata:
+  name: worker2
+spec:
+  terminationGracePeriodSeconds: 30
+  domain:
+    cpu:
+      cores: 2
+    clock:
+      utc: {}
+      timer:
+        hpet:
+          present: false
+        pit:
+          tickPolicy: delay
+        rtc:
+          tickPolicy: catchup
+    resources:
+      requests:
+        memory: 4096M
+    devices:
+      rng: {}
+      #autoattachGraphicsDevice: false
+      disks:
+      - name: emptydisk
+        disk:
+          bus: virtio
+        bootOrder: 1
+      interfaces:
+      - name: default
+        masquerade: {}
+      - name: tink-dev
+        bridge: {}
+        macAddress: "08:00:27:00:00:02"
+        bootOrder: 2
+  networks:
+  - name: default
+    pod: {}
+  - name: tink-dev
+    multus:
+      networkName: tink-dev-no-ip
+  volumes:
+  - name: emptydisk
+    emptyDisk:
+      capacity: "10Gi"

@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+option go_package = "github.com/tinkerbell/tink/protos/template";
+
+package github.com.tinkerbell.tink.protos.template;
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+
+service TemplateService {
+  rpc CreateTemplate(WorkflowTemplate) returns (CreateResponse) {
+    option (google.api.http) = {
+      post: "/v1/templates"
+      body: "*"
+    };
+  };
+  rpc GetTemplate(GetRequest) returns (WorkflowTemplate) {
+    option (google.api.http) = {
+      get: "/v1/templates/{id}"
+    };
+  };
+  rpc DeleteTemplate(GetRequest) returns (Empty) {
+    option (google.api.http) = {
+      delete: "/v1/templates/{id}"
+    };
+  };
+  rpc ListTemplates(ListRequest) returns (stream WorkflowTemplate) {
+    option (google.api.http) = {
+      get: "/v1/templates"
+    };
+  };
+  rpc UpdateTemplate(WorkflowTemplate) returns (Empty);
+}
+
+message Empty {
+}
+
+message WorkflowTemplate {
+  string id = 1;
+  string name = 2;
+  reserved 3; // obsolete data
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+  google.protobuf.Timestamp deleted_at = 6;
+  string data = 7;
+}
+
+message CreateResponse {
+  string id = 1;
+}
+
+message GetRequest {
+  oneof get_by {
+    string id = 1;
+    string name = 2;
+  }
+}
+
+message ListRequest {
+  oneof filter_by {
+    string name = 1;
+  }
+}

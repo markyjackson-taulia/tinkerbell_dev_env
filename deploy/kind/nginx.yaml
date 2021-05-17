@@ -1,0 +1,92 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: webroot
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tink-mirror
+spec:
+  selector:
+    matchLabels:
+      app: tink-mirror
+  template:
+    metadata:
+      annotations:
+        k8s.v1.cni.cncf.io/networks: '[{"interface":"net1","mac":"08:00:28:01:00:00","ips":["172.30.200.2/16"],"name":"tink-dev","namespace":"default"}]'
+      labels:
+        app: tink-mirror
+    spec:
+      initContainers:
+      - name: prep-directories
+        image: busybox:latest
+        command:
+        - mkdir
+        - -p
+        - /webroot/misc/osie/current
+        - /webroot/workflow
+        volumeMounts:
+        - mountPath: /webroot
+          name: webroot
+      - name: get-osie
+        image: busybox:latest
+        command:
+        - sh
+        - -c
+        - "cd /webroot/misc/osie/current && wget https://tinkerbell-oss.s3.amazonaws.com/osie-uploads/latest.tar.gz -O - | tar -xz --strip-components=1 && mv workflow-helper.sh workflow-helper-rc /webroot/workflow/"
+        volumeMounts:
+        - mountPath: /webroot
+          name: webroot
+      - name: get-cert
+        image: busybox:latest
+        command:
+        - cp
+        - /certs/ca.crt
+        - /webroot/workflow/ca.pem
+        volumeMounts:
+        - mountPath: /webroot
+          name: webroot
+        - mountPath: /certs
+          name: tink-server-certificate
+          readOnly: true
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /usr/share/nginx/html
+          name: webroot
+      volumes:
+      - name: webroot
+        persistentVolumeClaim:
+          claimName: webroot
+      - name: tink-server-certificate
+        secret:
+          secretName: tink-server-certificate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tink-mirror
+spec:
+  selector:
+    app: tink-mirror
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
