@@ -1,0 +1,73 @@
+# Load the extension for helm_remote
+load('ext://helm_remote', 'helm_remote')
+
+# Load the cert manager helpers
+load('../cert-manager/Tiltfile', 'generate_certificate')
+
+# Load the password helpers
+load('../../libraries/password/Tiltfile', 'generate_password')
+
+# Load the secret helpers
+load('../../libraries/secrets/Tiltfile', 'secret_exists', 'create_secret_if_not_exists')
+
+def deploy_registry(name='docker-registry', user='user', password="", url="", ip='192.168.1.1', cert_issuer='ca', cert_name='registry-certificate', pod_annotations='', credentials_secret_name='registry-credentials'):
+    if password == "":
+        password=generate_password()
+
+    if url == "":
+        url=ip+':5000'
+
+    create_secret_if_not_exists(credentials_secret_name, USERNAME=user, PASSWORD=password, URL=url)
+    password = str(local("kubectl get secret "+credentials_secret_name+" -o jsonpath='{.data.PASSWORD}' | base64 -d", quiet=True))
+    htpasswd = str(local('docker run --entrypoint htpasswd registry:2.6 -Bbn '+user+' '+password, quiet=True))
+    
+    generate_certificate(
+        issuer=cert_issuer,
+        name=cert_name,
+        dnsNames=[
+            name,
+            name+'.default',
+            name+'.default.svc',
+            name+'.default.svc.cluster.local',
+        ],
+        ipAddresses=[ip]
+    )
+
+    set_values = [
+        'persistence.enabled=true',
+        'service.port=443',
+        'tlsSecretName='+cert_name,
+        'secrets.htpasswd='+htpasswd,
+    ]
+    if pod_annotations != "":
+        set_values.append('podAnnotations.'+pod_annotations)
+
+    helm_remote(
+        'docker-registry',
+        release_name=name,
+        repo_url='https://charts.helm.sh/stable',
+        repo_name='docker-registry',
+        set=set_values,
+    )
+    k8s_resource(
+        workload=name,
+        objects=[
+            name+':persistentvolumeclaim',
+            name+'-config:configmap',
+            name+'-secret:secret'
+        ],
+        port_forwards=[
+            port_forward(5000, 5000, "registry_port_forward")
+        ],
+        resource_deps=[cert_name]
+    )
+
+def image_resource(name, img, credentials_secret_name='registry-credentials', resource_deps=[]):
+    user = str(local("kubectl get secret "+credentials_secret_name+" -o jsonpath='{.data.USERNAME}' | base64 -d", quiet=True))
+    password = str(local("kubectl get secret "+credentials_secret_name+" -o jsonpath='{.data.PASSWORD}' | base64 -d", quiet=True))
+
+    local_resource(
+        name,
+        'skopeo copy --dest-tls-verify=false --dest-creds='+user+':'+password+' docker-daemon:'+img+' docker://localhost:5000/'+img,
+        resource_deps=resource_deps
+    )

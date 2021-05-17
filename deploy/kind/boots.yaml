@@ -1,0 +1,105 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: boots
+spec:
+  selector:
+    matchLabels:
+      app: boots
+  template:
+    metadata:
+      annotations:
+        k8s.v1.cni.cncf.io/networks: '[{"interface":"net1","mac":"08:00:28:00:00:00","ips":["172.30.200.1/16"],"name":"tink-dev","namespace":"default"}]'
+      labels:
+        app: boots
+    spec:
+      initContainers:
+      - name: gateway
+        command:
+        - /bin/sh
+        - -c
+        - iptables -t nat -I POSTROUTING -o eth0 -j MASQUERADE
+        image: docker.io/library/docker:dind
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN", "NET_RAW"]
+          privileged: true
+      containers:
+      - name: boots
+        image: quay.io/tinkerbell/boots:sha-62ed4b82
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        command:
+        - /usr/bin/boots
+        - -dhcp-addr=0.0.0.0:67
+        - -tftp-addr=0.0.0.0:69
+        - -http-addr=0.0.0.0:80
+        - -syslog-addr=0.0.0.0:514
+        - -log-level=DEBUG
+        envFrom:
+        - prefix: REGISTRY_
+          secretRef:
+            name: tink-registry-credentials
+        env:
+        - name: PUBLIC_IP
+          value: 172.30.200.1
+        - name: MIRROR_BASE_URL
+          value: http://172.30.200.2
+        - name: API_AUTH_TOKEN
+          value: ignored
+        - name: API_CONSUMER_TOKEN
+          value: ignored
+        - name: FACILITY_CODE
+          value: onprem
+        - name: PACKET_ENV
+          value: testing
+        - name: PACKET_VERSION
+          value: ignored
+        - name: ROLLBAR_DISABLE
+          value: "1"
+        - name: ROLLBAR_TOKEN
+          value: ignored
+        - name: DNS_SERVERS
+          value: "8.8.8.8"
+        - name: DATA_MODEL_VERSION
+          value: "1"
+        - name: DOCKER_REGISTRY
+          value: $(REGISTRY_URL)
+        - name: TINKERBELL_GRPC_AUTHORITY
+          value: 172.30.200.4:42113
+        - name: TINKERBELL_CERT_URL
+          value: http://172.30.200.4:42114/cert
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        - containerPort: 67
+          name: dhcp
+          protocol: UDP
+        - containerPort: 69
+          name: tftp
+          protocol: UDP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: boots
+spec:
+  selector:
+    app: boots
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+  - name: dhcp
+    port: 67
+    protocol: UDP
+    targetPort: dhcp
+  - name: tftp
+    port: 69
+    protocol: UDP
+    targetPort: tftp

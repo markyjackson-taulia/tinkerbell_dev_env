@@ -1,0 +1,89 @@
+def issuer(self_signed_issuer=True, self_signed_ca_issuer=True, self_signed_ca_issuer_name='ca', resource_deps=[]):
+    if self_signed_issuer:
+            ss_issuer = {
+                'apiVersion': 'cert-manager.io/v1',
+                'kind': 'Issuer',
+                'metadata': {
+                    'name': 'selfsigned'
+                },
+                'spec': {
+                    'selfSigned': {}
+                }
+            }
+            k8s_yaml(encode_yaml(ss_issuer))
+            k8s_resource(
+                new_name='selfsigned-issuer',
+                objects=['selfsigned:issuer'],
+                resource_deps=resource_deps
+            )
+
+    if self_signed_ca_issuer:
+            ca_cert = {
+                'apiVersion': 'cert-manager.io/v1',
+                'kind': 'Certificate',
+                'metadata': {
+                    'name': self_signed_ca_issuer_name,
+                },
+                'spec': {
+                    'secretName': self_signed_ca_issuer_name,
+                    'commonName': self_signed_ca_issuer_name,
+                    'isCA': True,
+                    'issuerRef': {
+                        'name': 'selfsigned',
+                        'kind': 'Issuer',
+                        'group': 'cert-manager.io'
+                    }
+                }
+            }
+            k8s_yaml(encode_yaml(ca_cert))
+            k8s_resource(
+                new_name=self_signed_ca_issuer_name+'-certificate',
+                objects=[self_signed_ca_issuer_name+':certificate'],
+                resource_deps=['selfsigned-issuer']    
+            )
+
+            ca_issuer = {
+                'apiVersion': 'cert-manager.io/v1',
+                'kind': 'Issuer',
+                'metadata': {
+                    'name': self_signed_ca_issuer_name
+                },
+                'spec': {
+                    'ca': {
+                        'secretName': self_signed_ca_issuer_name
+                    }
+                }
+            }
+            k8s_yaml(encode_yaml(ca_issuer))
+            k8s_resource(
+                new_name=self_signed_ca_issuer_name+'-issuer',
+                objects=[self_signed_ca_issuer_name+':issuer'],
+                resource_deps=[self_signed_ca_issuer_name+'-certificate']    
+            )
+
+def generate_certificate(name, namespace="default", dnsNames=[], ipAddresses=[], issuer='ca'):
+    cert = {
+        'apiVersion': 'cert-manager.io/v1',
+        'kind': 'Certificate',
+        'metadata': {
+            'name': name,
+            'namespace': namespace,
+        },
+        'spec': {
+            'secretName': name,
+            'dnsNames': dnsNames,
+            'ipAddresses': ipAddresses,
+            'issuerRef': {
+                'name': issuer,
+                'kind': 'Issuer',
+                'group': 'cert-manager.io'
+            }
+        }
+    }
+    k8s_yaml(encode_yaml(cert))
+    k8s_resource(
+        new_name=name,
+        objects=[name+':certificate'],
+        resource_deps=[issuer+'-issuer']
+    )
+

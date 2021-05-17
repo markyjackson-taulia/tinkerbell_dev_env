@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hegel
+spec:
+  selector:
+    matchLabels:
+      app: hegel
+  template:
+    metadata:
+      labels:
+        app: hegel
+    spec:
+      containers:
+      - name: hegel
+        image: quay.io/tinkerbell/hegel:sha-c8a68311
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        env:
+        - name: HEGEL_FACILITY
+          value: onprem
+        - name: HEGEL_USE_TLS
+          value: "0"
+        - name: PACKET_ENV
+          value: testing
+        - name: PACKET_VERSION
+          value: ignored
+        - name: GRPC_PORT
+          value: "42115"
+        - name: ROLLBAR_DISABLE
+          value: "1"
+        - name: ROLLBAR_TOKEN
+          value: ignored
+        - name: TINKERBELL_GRPC_AUTHORITY
+          value: tink-server:42113
+        - name: TINKERBELL_CERT_URL
+          value: http://tink-server:42114/cert
+        - name: DATA_MODEL_VERSION
+          value: "1"
+        ports:
+        - containerPort: 42115
+          name: hegel-metadata
+          protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hegel
+spec:
+  selector:
+    app: hegel
+  ports:
+  - name: hegel-metadata
+    port: 42115
+    targetPort: hegel-metadata

@@ -1,0 +1,153 @@
+# Load the extension for helm_remote
+load('ext://helm_remote', 'helm_remote')
+
+def cert_manager(self_signed_issuer=True, self_signed_ca_issuer=True, self_signed_ca_issuer_name='ca', resource_deps=[]):
+    helm_remote(
+        'cert-manager',
+        namespace='cert-manager',
+        create_namespace=True,
+        repo_url='https://charts.jetstack.io',
+        repo_name='cert-manager',
+        set=['installCRDs=true']
+    )
+    k8s_resource(
+        workload='cert-manager',
+        objects=[
+            # Try to work arouund unmanaged role/clusterrole resources that cannot be included due to ':' in name
+            'cert-manager:namespace',
+            'cert-manager\\:leaderelection:role',
+            'cert-manager\\:leaderelection:rolebinding',
+            'certificaterequests.cert-manager.io:customresourcedefinition',
+            'certificates.cert-manager.io:customresourcedefinition',
+            'challenges.acme.cert-manager.io:customresourcedefinition',
+            'clusterissuers.cert-manager.io:customresourcedefinition',
+            'issuers.cert-manager.io:customresourcedefinition',
+            'orders.acme.cert-manager.io:customresourcedefinition',
+            'cert-manager:serviceaccount',
+            'cert-manager-controller-challenges:clusterrolebinding:cert-manager',
+            'cert-manager-controller-orders:clusterrolebinding:cert-manager',
+            'cert-manager-controller-certificates:clusterrolebinding:cert-manager',
+            'cert-manager-controller-issuers:clusterrolebinding:cert-manager',
+            'cert-manager-controller-clusterissuers:clusterrolebinding:cert-manager',
+            'cert-manager-controller-ingress-shim:clusterrolebinding:cert-manager',
+            'cert-manager-view:clusterrole:cert-manager',
+            'cert-manager-edit:clusterrole:cert-manager',
+            'cert-manager-controller-issuers:clusterrole:cert-manager',
+            'cert-manager-controller-clusterissuers:clusterrole:cert-manager',
+            'cert-manager-controller-certificates:clusterrole:cert-manager',
+            'cert-manager-controller-orders:clusterrole:cert-manager',
+            'cert-manager-controller-challenges:clusterrole:cert-manager',
+            'cert-manager-controller-ingress-shim:clusterrole:cert-manager'
+        ],
+        resource_deps=resource_deps
+    )
+    k8s_resource(
+        workload='cert-manager-cainjector',
+        objects=[
+            'cert-manager-cainjector:serviceaccount',
+            'cert-manager-cainjector:clusterrolebinding:cert-manager',
+            'cert-manager-cainjector:clusterrole:cert-manager',
+            'cert-manager-cainjector\\:leaderelection:role',
+            'cert-manager-cainjector\\:leaderelection:rolebinding'
+        ],
+        resource_deps=['cert-manager']
+    )
+    k8s_resource(
+        workload='cert-manager-webhook',
+        objects=[
+            'cert-manager-webhook:mutatingwebhookconfiguration',
+            'cert-manager-webhook:serviceaccount',
+            'cert-manager-webhook:validatingwebhookconfiguration',
+            'cert-manager-webhook\\:dynamic-serving:role',
+            'cert-manager-webhook\\:dynamic-serving:rolebinding'
+        ],
+        resource_deps=['cert-manager-cainjector']
+    )
+
+    if self_signed_issuer:
+        ss_issuer = {
+            'apiVersion': 'cert-manager.io/v1',
+            'kind': 'Issuer',
+            'metadata': {
+                'name': 'selfsigned'
+            },
+            'spec': {
+                'selfSigned': {}
+            }
+        }
+        k8s_yaml(encode_yaml(ss_issuer))
+        k8s_resource(
+            new_name='selfsigned-issuer',
+            objects=['selfsigned:issuer'],
+            resource_deps=['cert-manager-webhook']
+        )
+
+    if self_signed_ca_issuer:
+        ca_cert = {
+            'apiVersion': 'cert-manager.io/v1',
+            'kind': 'Certificate',
+            'metadata': {
+                'name': self_signed_ca_issuer_name,
+            },
+            'spec': {
+                'secretName': self_signed_ca_issuer_name,
+                'commonName': self_signed_ca_issuer_name,
+                'isCA': True,
+                'issuerRef': {
+                    'name': 'selfsigned',
+                    'kind': 'Issuer',
+                    'group': 'cert-manager.io'
+                }
+            }
+        }
+        k8s_yaml(encode_yaml(ca_cert))
+        k8s_resource(
+            new_name=self_signed_ca_issuer_name+'-certificate',
+            objects=[self_signed_ca_issuer_name+':certificate'],
+            resource_deps=['selfsigned-issuer']    
+        )
+
+        ca_issuer = {
+            'apiVersion': 'cert-manager.io/v1',
+            'kind': 'Issuer',
+            'metadata': {
+                'name': self_signed_ca_issuer_name
+            },
+            'spec': {
+                'ca': {
+                    'secretName': self_signed_ca_issuer_name
+                }
+            }
+        }
+        k8s_yaml(encode_yaml(ca_issuer))
+        k8s_resource(
+            new_name=self_signed_ca_issuer_name+'-issuer',
+            objects=[self_signed_ca_issuer_name+':issuer'],
+            resource_deps=[self_signed_ca_issuer_name+'-certificate']    
+        )
+
+def generate_certificate(name, namespace="default", dnsNames=[], ipAddresses=[], issuer='ca'):
+    cert = {
+        'apiVersion': 'cert-manager.io/v1',
+        'kind': 'Certificate',
+        'metadata': {
+            'name': name,
+            'namespace': namespace,
+        },
+        'spec': {
+            'secretName': name,
+            'dnsNames': dnsNames,
+            'ipAddresses': ipAddresses,
+            'issuerRef': {
+                'name': issuer,
+                'kind': 'Issuer',
+                'group': 'cert-manager.io'
+            }
+        }
+    }
+    k8s_yaml(encode_yaml(cert))
+    k8s_resource(
+        new_name=name,
+        objects=[name+':certificate'],
+        resource_deps=[issuer+'-issuer']    
+    )

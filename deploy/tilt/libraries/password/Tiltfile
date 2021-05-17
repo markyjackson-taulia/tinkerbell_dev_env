@@ -1,0 +1,5 @@
+# Load the extension for local_output
+load('ext://local_output', 'local_output')
+
+def generate_password():
+    return local_output("head -c 12 /dev/urandom | shasum -a 256 | cut -d' ' -f1")
