@@ -142,7 +142,8 @@ tasks:
 EOF
 
 tink template create --file hello-world.yml
-tink workflow create -t <template id> -r '{"device_1":"08:00:28:00:00:01"}'
+tink workflow create -t ce2e62ed-826f-4485-a39f-a82bb74338e2 -r '{"device_1":"08:00:28:00:00:01"}'
+tink workflow create -t fe2e62ed-826f-4485-a39f-a82bb74338e3 -r '{"device_2":"08:00:28:00:00:02"}'
 ```
 
 ## Load the hello-world image into the registry
