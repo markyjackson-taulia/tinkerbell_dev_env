@@ -31,7 +31,7 @@ On Linux you will need remote-viewer
 - Bring up a new kind cluster
 
 ```sh
-kind create cluster
+kind create cluster --name tinkerbell --config kind-example-config.yaml
 docker exec -it kind-control-plane sh -c "echo 0 >/proc/sys/net/bridge/bridge-nf-call-iptables"
 ```
 
