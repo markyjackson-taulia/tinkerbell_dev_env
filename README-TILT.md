@@ -173,3 +173,4 @@ kind delete cluster
 
 ## TODO
 - Add some type of templating mechanism helm/kustomize????
+- Add script to wrap this all up using some witty cli input for various "flavors"
